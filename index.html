@@ -52,7 +52,7 @@ td.p{padding:8px;white-space:nowrap}
 <script>
 const CLS0=[["Playgroup","Pre Creche"],["Creche"],["Nursery 1"],["Nursery 2"],["Nursery 3"],["Primary 1"],["Primary 2"],["Primary 3"],["Primary 4"],["Primary 5"],["Primary 6"],["JSS 1"],["JSS 2"],["JSS 3"]].map(a=>({id:a[0],name:a[1]||a[0]}));
 const TERMS=[["t1","1st Term"],["t2","2nd Term"],["t3","3rd Term"]],TYPES=[["fee","School fee"],["uniform","Uniform"],["books","Books"]];
-const APP_VERSION="1.0.2",REQUIRED_SCHEMA=1;
+const APP_VERSION="1.0.3",REQUIRED_SCHEMA=1;
 let students=[],CF={},CL=CLS0,sessions=[],S="",logs=[],me="Staff",role="staff",sb=null,inflight=0;
 let view="dash",T="t1",A="all",q="",dcls="all",sh=null,menuOpen=false,pending=false;
 let navDepth=0;try{const z=JSON.parse(localStorage.getItem("lv")||"{}");if(z.view)view=z.view;if(z.T)T=z.T;if(z.A)A=z.A;if(z.S)S=z.S}catch(e){}
@@ -250,10 +250,11 @@ function loginUI(msg){const L=$("lock");L.style.display="flex";
   L.innerHTML=`<div class="card"><div style="font-size:34px">🏫</div><h2 style="margin:6px 0">School Ledger</h2><p class="lbl">Sign in with your staff account</p><input id="em" type="email" placeholder="Email" autocomplete="username" style="width:100%;margin-bottom:8px"><input id="pw" type="password" placeholder="Password" autocomplete="current-password" style="width:100%"><div class="err" id="pe">${esc(msg||"")}</div><button class="btn" id="pg" style="width:100%">Sign in</button></div>`;
   const go=async()=>{$("pe").textContent="";const r=await sb.auth.signInWithPassword({email:$("em").value.trim(),password:$("pw").value});if(r.error)return $("pe").textContent=r.error.message;start(r.data.user)};
   $("pg").onclick=go;$("pw").onkeydown=e=>{if(e.key==="Enter")go()}}
-async function start(u){const p=await sb.from("profiles").select("*").eq("id",u.id).maybeSingle();
-  if(p.error||!p.data){await sb.auth.signOut();return loginUI("This account has no access yet. Ask the school administrator.")}
+let started=false;
+async function start(u){if(started)return;started=true;const p=await sb.from("profiles").select("*").eq("id",u.id).maybeSingle();
+  if(p.error||!p.data){started=false;await sb.auth.signOut();return loginUI("This account has no access yet. Ask the school administrator.")}
   me=p.data.name;role=p.data.role;$("lock").style.display="none";$("st").textContent="Loading…";
-  if(await load()){history.replaceState({v:view},"");render();sb.channel("ledger").on("postgres_changes",{event:"*",schema:"public"},refresh).subscribe();
+  if(await load()){history.replaceState({v:view},"");render();sb.channel("ledger-"+uid()).on("postgres_changes",{event:"*",schema:"public"},refresh).subscribe();
     setInterval(()=>{if(!document.hidden)refresh()},90000);document.addEventListener("visibilitychange",()=>{if(!document.hidden)refresh()})}}
 window.addEventListener("online",()=>role&&render());window.addEventListener("offline",()=>role&&render());
 if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
