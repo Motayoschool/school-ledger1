@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>School Ledger</title><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1d4ed8"><link rel="apple-touch-icon" href="icon-192.png"><meta name="apple-mobile-web-app-capable" content="yes"><script src="config.js"></script><script src="supabase.js"></script>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);--bg:#f4f6f9;--card:#fff;--tx:#1a2230;--mut:#667085;--ac:#1d4ed8;--bd:#dde2ea;--red:#d92d20;--grn:#12a15b}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#11151b;--card:#1a2029;--tx:#e8ecf2;--mut:#98a2b3;--ac:#6b9bff;--bd:#2b3441;--red:#f97066;--grn:#32d583}}
+:root[data-theme="dark"]{--bg:#11151b;--card:#1a2029;--tx:#e8ecf2;--mut:#98a2b3;--ac:#6b9bff;--bd:#2b3441;--red:#f97066;--grn:#32d583}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+button{font:inherit;cursor:pointer;color:inherit}
+input,select{font:inherit;color:var(--tx);background:var(--bg);border:1px solid var(--bd);border-radius:8px;padding:9px;min-width:0}
+header{display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--card);border-bottom:1px solid var(--bd);position:sticky;top:env(safe-area-inset-top,0px);z-index:5}
+.burger{width:42px;height:42px;border-radius:50%;border:1px solid var(--bd);background:var(--bg);font-size:20px}
+h1{font-size:17px;margin:0;flex:1}.sync{font-size:12px;color:var(--mut)}
+nav{position:fixed;inset:0 auto 0 0;width:270px;max-width:82%;background:var(--card);border-right:1px solid var(--bd);padding:calc(14px + env(safe-area-inset-top,0px)) 10px 14px;transform:translateX(-100%);transition:.2s;z-index:20;overflow-y:auto}
+nav.open{transform:none}
+nav button{display:flex;justify-content:space-between;width:100%;padding:11px 12px;margin-bottom:3px;border:0;border-radius:8px;background:none;text-align:left}
+nav button.on{background:var(--ac);color:#fff}nav hr{border:0;border-top:1px solid var(--bd);margin:8px 0}
+.scrim{position:fixed;inset:0;background:#0007;z-index:19;display:none}.scrim.show{display:block}
+main{padding:14px;max-width:1050px;margin:auto}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px;margin-bottom:12px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.big{font-size:28px;font-weight:700}.lbl{color:var(--mut);font-size:12px}
+.tabs{display:flex;gap:6px;margin-bottom:12px}
+.tabs button{flex:1;padding:9px;border:1px solid var(--bd);border-radius:999px;background:var(--card)}
+.tabs button.on{background:var(--ac);color:#fff;border-color:var(--ac)}
+.pills{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.pill{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:10px}.pill b{display:block;font-size:15px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}.row input{flex:1;min-width:120px}
+.btn{background:var(--ac);color:#fff;border:0;border-radius:8px;padding:9px 14px}
+.btn.ghost{background:var(--bg);color:var(--tx);border:1px solid var(--bd)}.btn.red{background:var(--red)}
+.cls{display:flex;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--bd);cursor:pointer}.cls:last-child{border:0}
+.wrap{overflow-x:auto;border-radius:10px}
+table{border-collapse:collapse;width:100%;min-width:860px;background:var(--card)}
+th,td{border:1px solid var(--bd);padding:2px;font-size:14px}
+th{padding:8px;font-size:12px;text-align:left;color:var(--mut);background:var(--bg)}
+td input,td select{width:100%;border:0;background:transparent;padding:8px 6px}
+td.p{padding:8px;white-space:nowrap}
+.ic{border:0;background:none;padding:6px}
+.paybtn{width:100%;border:0;background:none;padding:8px 6px;text-align:left;color:var(--ac);font-weight:600;text-decoration:underline}
+.modal{position:fixed;inset:0;background:#0007;z-index:30;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--card);width:100%;max-width:520px;border-radius:16px 16px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom,0px));max-height:88%;overflow-y:auto}
+.sheet h2{margin:0 0 12px;font-size:17px}.sheet label{display:block;font-size:12px;color:var(--mut);margin:10px 0 4px}.sheet input,.sheet select{width:100%}
+.pay{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--bd)}
+#lock{position:fixed;inset:0;background:var(--bg);z-index:50;display:flex;align-items:center;justify-content:center;padding:20px}
+#lock .card{width:100%;max-width:340px;text-align:center}.err{color:var(--red);font-size:13px;min-height:18px}
+.ic{text-decoration:none;cursor:pointer}.pay input[type=checkbox]{width:20px;height:20px}</style></head><body>
+<div class="scrim" id="scrim"></div><nav id="nav"></nav>
+<header><button class="burger" id="bb" aria-label="Menu">☰</button><button class="burger" id="bk" aria-label="Back" style="display:none">←</button><h1 id="title">Dashboard</h1><span class="sync" id="st"></span></header>
+<main id="main"><p style="color:var(--mut)">Loading…</p></main><div id="modal"></div><div id="lock" style="display:none"></div>
+<script>
+const CLS0=[["Playgroup","Pre Creche"],["Creche"],["Nursery 1"],["Nursery 2"],["Nursery 3"],["Primary 1"],["Primary 2"],["Primary 3"],["Primary 4"],["Primary 5"],["Primary 6"],["JSS 1"],["JSS 2"],["JSS 3"]].map(a=>({id:a[0],name:a[1]||a[0]}));
+const TERMS=[["t1","1st Term"],["t2","2nd Term"],["t3","3rd Term"]],TYPES=[["fee","School fee"],["uniform","Uniform"],["books","Books"]];
+const APP_VERSION="1.0.2",REQUIRED_SCHEMA=1;
+let students=[],CF={},CL=CLS0,sessions=[],S="",logs=[],me="Staff",role="staff",sb=null,inflight=0;
+let view="dash",T="t1",A="all",q="",dcls="all",sh=null,menuOpen=false,pending=false;
+let navDepth=0;try{const z=JSON.parse(localStorage.getItem("lv")||"{}");if(z.view)view=z.view;if(z.T)T=z.T;if(z.A)A=z.A;if(z.S)S=z.S}catch(e){}
+const $=id=>document.getElementById(id),num=v=>Number(v)||0,naira=n=>"₦"+num(n).toLocaleString();
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const uid=()=>crypto.randomUUID();
+const cname=id=>(CL.find(c=>c.id===id)||{name:id}).name,tn=t=>TERMS.find(x=>x[0]===t)[1],tl=ty=>TYPES.find(x=>x[0]===ty)[1];
+const key=(ty,se=S,t=T)=>se.replace("/","-")+"_"+t+"_"+ty;
+const fee=(s,ty,se=S,t=T)=>{const k=key(ty,se,t);return s.fees&&s.fees[k]!=null?num(s.fees[k]):num(CF[s.cls+"_"+k])};
+const pays=(s,ty,se=S,t=T)=>(s.payments&&s.payments[key(ty,se,t)])||[];
+const paid=(s,ty,se=S,t=T)=>pays(s,ty,se,t).reduce((a,p)=>a+num(p.amt),0);
+const ac=()=>A==="all"?TYPES.map(x=>x[0]):[A];
+const Fx=s=>ac().reduce((a,ty)=>a+fee(s,ty),0),Px=s=>ac().reduce((a,ty)=>a+paid(s,ty),0);
+const periods=()=>sessions.flatMap(se=>TERMS.map(([t])=>[se,t]));
+const pb=(s,se,t)=>TYPES.reduce((a,[ty])=>a+fee(s,ty,se,t)-paid(s,ty,se,t),0);
+const arrears=s=>{let r=0;for(const [se,t] of periods()){if(se===S&&t===T)break;r+=pb(s,se,t)}return r};
+const owedAll=s=>periods().reduce((a,[se,t])=>a+pb(s,se,t),0);
+const sum=(l,f)=>l.reduce((a,x)=>a+f(x),0),find=id=>students.find(s=>s.id===id);
+const active=()=>students.filter(s=>(s.status||"active")==="active"),inCls=c=>active().filter(s=>s.cls===c);
+const isCls=v=>CL.some(c=>c.id===v);
+const wa=p=>{let d=String(p||"").replace(/\D/g,"");if(d.startsWith("0"))d="234"+d.slice(1);return d};
+const ban=t=>{let b=document.getElementById("ban");if(!b){b=document.createElement("div");b.id="ban";b.style.cssText="background:#b42318;color:#fff;padding:10px 14px;font-size:14px";document.body.prepend(b)}b.textContent=t;b.style.display=t?"block":"none"};
+window.addEventListener("error",e=>ban("App error: "+e.message));window.addEventListener("unhandledrejection",e=>ban("App error: "+((e.reason&&e.reason.message)||e.reason)));
+const fail=e=>{if(e){console.error(e);alert("Could not save: "+e.message)}return !!e};
+const pk=k=>{const p=k.split("_"),ty=p.pop(),t=p.pop(),se=p.pop().replace("-","/");return{rest:p.join("_"),se,t,ty}};
+const flat=st=>{const o={};for(const k in ((st&&st.payments)||{}))for(const p of st.payments[k])o[p.id]={...p,k};return o};
+const save=async s=>{const i=students.findIndex(x=>x.id===s.id),old=i<0?null:students[i];i<0?students.push(s):students[i]=s;inflight++;
+  try{
+    if(fail((await sb.from("students").upsert({id:s.id,name:s.name,class_id:s.cls,gender:s.gender||null,phone:s.phone||null,status:s.status||"active"})).error))return;
+    const of=(old&&old.fees)||{},fr=[];
+    for(const k in (s.fees||{}))if(of[k]!==s.fees[k]){const q=pk(k);fr.push({student_id:s.id,session:q.se,term:q.t,type:q.ty,amount:num(s.fees[k])})}
+    if(fr.length&&fail((await sb.from("fees").upsert(fr)).error))return;
+    const n=flat(s),o=flat(old),add=Object.values(n).filter(p=>!o[p.id]).map(p=>{const q=pk(p.k);return{id:p.id,student_id:s.id,session:q.se,term:q.t,type:q.ty,amount:num(p.amt),paid_on:p.date||null,recorded_name:p.by||me}}),del=Object.keys(o).filter(id=>!n[id]);
+    if(add.length&&fail((await sb.from("payments").insert(add)).error))return;
+    if(del.length)fail((await sb.from("payments").delete().in("id",del)).error);
+  }finally{inflight--}};
+const saveCF=async()=>{const rows=Object.keys(CF).map(k=>{const q=pk(k);return{class_id:q.rest,session:q.se,term:q.t,type:q.ty,amount:num(CF[k])}});if(rows.length)fail((await sb.from("class_fees").upsert(rows)).error)};
+const saveCL=async()=>{if(fail((await sb.from("classes").upsert(CL.map((c,i)=>({id:c.id,name:c.name,position:i})))).error))return;
+  fail((await sb.from("classes").delete().not("id","in","("+CL.map(c=>'"'+c.id+'"').join(",")+")")).error)};
+const saveMeta=async()=>fail((await sb.from("sessions").upsert(sessions.map((n,i)=>({name:n,position:i})))).error);
+const logit=a=>{logs.unshift({ts:Date.now(),by:me,a});sb.from("activity_log").insert({by_name:me,action:a}).then(r=>r.error&&console.error(r.error))};
+const freeze=s=>{const f={...(s.fees||{})};for(let i=0;i<=sessions.indexOf(S);i++)for(const [t] of TERMS)for(const [ty] of TYPES){const k=key(ty,sessions[i],t);if(f[k]==null)f[k]=fee(s,ty,sessions[i],t)}return f};
+const balc=(b,f,p)=>!f&&!p?"var(--mut)":b>0?"var(--red)":"var(--grn)",balt=(b,f,p)=>!f&&!p?"—":b>0?naira(b):b<0?"Over "+naira(-b):"Clear ✓";
+const tb=(items,cur,at)=>`<div class="tabs">${items.map(([k,n])=>`<button data-${at}="${k}" class="${cur===k?"on":""}">${n}</button>`).join("")}</div>`;
+const ctl=m=>`<select id="ss" style="width:100%;margin-bottom:8px">${sessions.map(x=>`<option ${x===S?"selected":""}>${x}</option>`).join("")}</select>`+tb(TERMS,T,"t")+(m==="none"?"":tb(m==="all"?[["all","All"],...TYPES]:TYPES,A,"ac"));
+function pills(l){const e=sum(l,Fx),c=sum(l,Px),ar=sum(l,arrears);return `<div class="pills"><div class="pill"><span class="lbl">Expected</span><b>${naira(e)}</b></div><div class="pill"><span class="lbl">Collected</span><b style="color:var(--grn)">${naira(c)}</b></div><div class="pill"><span class="lbl">Outstanding</span><b style="color:var(--red)">${naira(Math.max(e-c,0))}</b></div></div><div class="lbl" style="margin:-4px 0 12px">Arrears brought forward: <b>${naira(ar)}</b></div>`}
+
+function nav(){const it=(v,l)=>`<button data-v="${v}" class="${view===v?"on":""}">${l}</button>`;
+  $("nav").innerHTML=it("dash","🏠 Dashboard")+it("def","📋 Defaulters")+`<hr><div class="lbl" style="margin:4px 8px">CLASSES</div>`+CL.map(c=>`<button data-v="${c.id}" class="${view===c.id?"on":""}"><span>${esc(c.name)}</span><span>${inCls(c.id).length}</span></button>`).join("")+`<hr>`+(role==="admin"?it("promo","🎓 Promote / Graduate"):"")+it("arch","📦 Archive")+(role==="admin"?it("cls","⚙️ Manage classes"):"")+it("log","🧾 Activity log")+(role==="admin"?`<button data-a="ses">➕ New session</button><button data-a="exp">⬇ Export backup (CSV)</button>`:"")+`<hr><div class="lbl" style="margin:4px 8px">${esc(me)} · ${role}</div><button data-a="pw">🔑 Change password</button><button data-a="signout">🚪 Sign out</button><div class="lbl" style="margin:8px">Version ${APP_VERSION}</div>`;
+  $("nav").classList.toggle("open",menuOpen);$("scrim").classList.toggle("show",menuOpen)}
+
+function render(){pending=false;nav();try{localStorage.setItem("lv",JSON.stringify({view,T,A,S}))}catch(e){}$("bk").style.display=view==="dash"?"none":"";$("st").textContent=navigator.onLine?"● synced":"● offline";const M=$("main");
+  if(view==="dash")dash(M);else if(view==="def")defs(M);else if(view==="promo")promo(M);else if(view==="arch")arch(M);else if(view==="cls")mcls(M);else if(view==="log")logv(M);else if(view.startsWith("stu:"))stud(M);else clsv(M);
+  const ss=$("ss");if(ss)ss.onchange=e=>{S=e.target.value;render()};modal()}
+
+function dash(M){$("title").textContent="Dashboard";const a=active();
+  M.innerHTML=`<div class="grid2"><div class="card" style="margin:0"><div class="big" style="color:var(--ac)">${a.length}</div><div class="lbl">Active students</div></div><button class="btn" data-a="add" style="font-size:16px">＋ Add Student</button></div>
+  <div class="card"><input id="gs" placeholder="🔍 Find any student by name or phone…" style="width:100%"><div id="res"></div></div>${ctl("all")}${pills(a)}
+  <button class="btn ghost" data-v="def" style="width:100%;margin-bottom:12px">📋 View defaulters</button>
+  <div class="card"><b>Classes</b>${CL.map(c=>{const l=inCls(c.id);return `<div class="cls" data-v="${c.id}"><span>${esc(c.name)} <span class="lbl">· ${l.length}</span></span><span class="lbl">${naira(sum(l,Px))} / ${naira(sum(l,Fx))}</span></div>`}).join("")}</div>`;
+  $("gs").oninput=e=>{const v=e.target.value.trim().toLowerCase();$("res").innerHTML=v?students.filter(s=>(s.name+" "+(s.phone||"")).toLowerCase().includes(v)).slice(0,8).map(s=>`<div class="cls" data-v="stu:${s.id}"><span>${esc(s.name)} <span class="lbl">· ${esc(cname(s.cls))}${(s.status||"active")!=="active"?" · "+s.status:""}</span></span><span>›</span></div>`).join("")||`<p class="lbl">No match.</p>`:""}}
+
+function clsv(M){const c=CL.find(x=>x.id===view);if(!c){view="dash";return render()}
+  $("title").textContent=c.name;if(A==="all")A="fee";
+  const all=inCls(c.id),rows=all.filter(s=>!q||s.name.toLowerCase().includes(q.toLowerCase())).sort((a,b)=>a.name.localeCompare(b.name)),lab=tl(A),cf=CF[c.id+"_"+key(A)];
+  M.innerHTML=`${ctl("cls")}${pills(all)}
+  <div class="card"><b>Set ${lab} for whole class</b> <span class="lbl">(${tn(T)} ${S})</span><div class="row" style="margin:8px 0 0">₦<input id="cf" type="number" min="0" inputmode="numeric" placeholder="Amount" value="${cf||""}"><button class="btn" data-a="applycf">Apply to all</button></div></div>
+  <div class="row"><input id="q" placeholder="Search students…" value="${esc(q)}"><button class="btn" data-a="add">＋ Add</button></div>
+  <div class="wrap"><table><tr><th>#</th><th>Name</th><th>Gender</th><th>Parent's number</th><th>${lab} (₦)</th><th>Paid</th><th>Balance</th><th>Arrears</th><th></th></tr>
+  ${rows.map((s,i)=>{const f=fee(s,A),p=paid(s,A),b=f-p,ar=arrears(s);return `<tr><td class="p">${i+1}</td><td class="p">${esc(s.name)} <button class="ic" data-ren="${s.id}">✏️</button></td>
+  <td><select data-id="${s.id}" data-k="gender"><option></option>${["Male","Female"].map(x=>`<option ${s.gender===x?"selected":""}>${x}</option>`).join("")}</select></td>
+  <td><input type="tel" data-id="${s.id}" data-k="phone" value="${esc(s.phone)}"></td>
+  <td><input type="number" min="0" inputmode="numeric" data-id="${s.id}" data-k="fee" value="${f||""}"></td>
+  <td><button class="paybtn" data-pay="${s.id}" data-ty="${A}" data-tt="${T}">${naira(p)}</button></td>
+  <td class="p" style="font-weight:600;color:${balc(b,f,p)}">${balt(b,f,p)}</td><td class="p" style="color:${ar>0?"var(--red)":"var(--mut)"}">${ar>0?naira(ar):"—"}</td>
+  <td class="p"><button class="ic" data-v="stu:${s.id}" aria-label="Open record">👤</button><button class="ic" data-arch="${s.id}" aria-label="Archive">📦</button></td></tr>`}).join("")||`<tr><td colspan="9" style="padding:16px;color:var(--mut)">No students found.</td></tr>`}</table></div>`;
+  $("q").oninput=e=>{q=e.target.value;const p=e.target.selectionStart;render();$("q").focus();$("q").setSelectionRange(p,p)};
+  M.querySelectorAll("[data-k]").forEach(el=>el.onchange=()=>{const s=find(el.dataset.id),k=el.dataset.k;if(!s)return;
+    if(k==="fee"){save({...s,fees:{...(s.fees||{}),[key(A)]:num(el.value)}});logit(`Set ${lab} fee for ${s.name} to ${naira(el.value)} (${tn(T)} ${S})`)}else save({...s,[k]:el.value});render()})}
+
+function stud(M){const s=find(view.slice(4));if(!s){view="dash";return render()}
+  $("title").textContent=s.name;const st=s.status||"active",ow=owedAll(s);
+  M.innerHTML=`<div class="card"><div class="row" style="margin:0"><b style="font-size:18px;flex:1">${esc(s.name)}</b><button class="ic" data-ren="${s.id}">✏️</button></div>
+  <div class="lbl">${st!=="active"?"Status: "+st:"Active student"}</div>
+  <div class="grid2" style="margin:10px 0 0"><div><label class="lbl">Class</label><select data-id="${s.id}" data-k="cls" style="width:100%">${CL.map(c=>`<option value="${c.id}" ${c.id===s.cls?"selected":""}>${esc(c.name)}</option>`).join("")}</select></div>
+  <div><label class="lbl">Gender</label><select data-id="${s.id}" data-k="gender" style="width:100%"><option></option>${["Male","Female"].map(x=>`<option ${s.gender===x?"selected":""}>${x}</option>`).join("")}</select></div></div>
+  <label class="lbl">Parent's number</label><input type="tel" data-id="${s.id}" data-k="phone" value="${esc(s.phone)}" style="width:100%">
+  <div class="row" style="margin:12px 0 0">${st==="active"?`<button class="btn ghost" data-arch="${s.id}">📦 Archive</button>`:`<button class="btn" data-rest="${s.id}">♻️ Restore</button>`}${s.phone?`<a class="btn ghost" href="tel:${esc(s.phone)}" style="text-decoration:none">📞</a><a class="btn ghost" href="https://wa.me/${wa(s.phone)}" target="_blank" rel="noopener" style="text-decoration:none">💬</a>`:""}</div></div>
+  <div class="pills"><div class="pill"><span class="lbl">Overall balance (all sessions)</span><b style="color:${ow>0?"var(--red)":"var(--grn)"}">${ow>0?naira(ow):ow<0?"Credit "+naira(-ow):"Clear ✓"}</b></div><div class="pill" style="grid-column:span 2"><span class="lbl">Arrears before ${tn(T)} ${S}</span><b>${naira(Math.max(arrears(s),0))}</b></div></div>
+  ${ctl("none")}<div class="lbl" style="margin-bottom:6px">Tap an amount to view payments or set the fee. Shown as paid / fee.</div>
+  <div class="wrap"><table style="min-width:520px"><tr><th></th>${TERMS.map(t=>`<th>${t[1]}</th>`).join("")}</tr>${TYPES.map(([ty,n])=>`<tr><td class="p"><b>${n}</b></td>${TERMS.map(([t])=>`<td class="p"><button class="paybtn" data-pay="${s.id}" data-ty="${ty}" data-tt="${t}">${naira(paid(s,ty,S,t))} / ${naira(fee(s,ty,S,t))}</button></td>`).join("")}</tr>`).join("")}</table></div>`;
+  M.querySelectorAll("[data-k]").forEach(el=>el.onchange=()=>{const k=el.dataset.k,o=find(el.dataset.id);
+    if(k==="cls"){save({...o,fees:freeze(o),cls:el.value});logit(`Moved ${o.name} to ${cname(el.value)}`)}else save({...o,[k]:el.value});render()})}
+
+function defs(M){$("title").textContent="Defaulters";
+  const l=active().filter(s=>dcls==="all"||s.cls===dcls).map(s=>{const ar=arrears(s),cu=pb(s,S,T);return{s,ar,cu,t:ar+cu}}).filter(x=>x.t>0).sort((a,b)=>b.t-a.t);
+  M.innerHTML=`${ctl("none")}<select id="dc" style="width:100%;margin-bottom:10px"><option value="all">All classes</option>${CL.map(c=>`<option value="${c.id}" ${dcls===c.id?"selected":""}>${esc(c.name)}</option>`).join("")}</select>
+  <div class="pills"><div class="pill"><span class="lbl">Defaulters</span><b>${l.length}</b></div><div class="pill" style="grid-column:span 2"><span class="lbl">Total owed (all fee types)</span><b style="color:var(--red)">${naira(sum(l,x=>x.t))}</b></div></div>
+  ${l.map(x=>`<div class="card" style="padding:10px"><div class="row" style="margin:0;flex-wrap:nowrap"><div style="flex:1;cursor:pointer" data-v="stu:${x.s.id}"><b>${esc(x.s.name)}</b><div class="lbl">${esc(cname(x.s.cls))} · Arrears ${naira(x.ar)} · This term ${naira(x.cu)}</div></div><b style="color:var(--red)">${naira(x.t)}</b>${x.s.phone?`<a class="ic" href="tel:${esc(x.s.phone)}">📞</a><a class="ic" href="https://wa.me/${wa(x.s.phone)}" target="_blank" rel="noopener">💬</a>`:""}</div></div>`).join("")||`<p class="lbl">🎉 Nobody is owing for this period.</p>`}`;
+  $("dc").onchange=e=>{dcls=e.target.value;render()}}
+
+function promo(M){$("title").textContent="Promote / Graduate";
+  M.innerHTML=`<div class="card"><p class="lbl" style="margin:0">Untick anyone who is repeating. Start from the <b>highest class</b> and work down, so promoted students don't get mixed with those not yet moved. Each student's fees and payments stay with them.</p></div>`+
+  CL.map((c,i)=>i).reverse().map(i=>{const c=CL[i],nx=CL[i+1],l=inCls(c.id).sort((a,b)=>a.name.localeCompare(b.name));if(!l.length)return"";
+  return `<div class="card"><b>${esc(c.name)} → ${nx?esc(nx.name):"Graduate 🎓"}</b>${l.map(s=>`<label class="pay"><span>${esc(s.name)}</span><input type="checkbox" data-pc="${c.id}" data-sid="${s.id}" checked style="width:auto"></label>`).join("")}<button class="btn" data-a="promo" data-i="${i}" style="width:100%;margin-top:10px">${nx?"Promote selected":"Graduate selected"}</button></div>`}).join("")}
+
+function arch(M){$("title").textContent="Archive & graduated";const l=students.filter(s=>(s.status||"active")!=="active").sort((a,b)=>a.name.localeCompare(b.name));
+  M.innerHTML=`<div class="card">${l.map(s=>`<div class="pay"><span data-v="stu:${s.id}" style="cursor:pointer">${esc(s.name)}<br><span class="lbl">${esc(cname(s.cls))} · ${s.status}${owedAll(s)>0?" · owes "+naira(owedAll(s)):""}</span></span><button class="btn ghost" data-rest="${s.id}">♻️ Restore</button></div>`).join("")||`<p class="lbl">Nothing archived yet. Archived and graduated students keep all their records.</p>`}</div>`}
+
+function mcls(M){$("title").textContent="Manage classes";
+  M.innerHTML=`<div class="card"><p class="lbl" style="margin-top:0">Renaming keeps every student, fee and payment. The order decides which class students are promoted into.</p>${CL.map((c,i)=>{const n=students.filter(s=>s.cls===c.id).length;return `<div class="row"><input data-cn="${c.id}" value="${esc(c.name)}"><button class="ic" data-mv="${i}:-1">▲</button><button class="ic" data-mv="${i}:1">▼</button>${n?`<span class="lbl">${n} 👤</span>`:`<button class="ic" data-rc="${c.id}">✕</button>`}</div>`}).join("")}<div class="row"><input id="nc" placeholder="New class name"><button class="btn" data-a="addc">Add class</button></div></div>`;
+  M.querySelectorAll("[data-cn]").forEach(el=>el.onchange=()=>{const v=el.value.trim(),c=CL.find(x=>x.id===el.dataset.cn);if(!v||v===c.name)return render();logit(`Renamed class ${c.name} → ${v}`);c.name=v;saveCL();render()})}
+
+function logv(M){$("title").textContent="Activity log";
+  M.innerHTML=`<div class="card">${logs.slice(0,200).map(e=>`<div class="pay" style="align-items:flex-start"><span>${esc(e.a)}<br><span class="lbl">${esc(e.by)} · ${new Date(e.ts).toLocaleString()}</span></span></div>`).join("")||`<p class="lbl">No activity yet.</p>`}</div>`}
+
+function modal(){const m=$("modal");if(!sh){m.innerHTML="";return}let body="";
+  const btns=(ok,l)=>`<div class="row" style="margin-top:14px"><button class="btn ghost" data-a="close">Cancel</button><button class="btn" data-a="${ok}" style="flex:1">${l}</button></div>`;
+  if(sh.k==="add"){const dc=isCls(view)?view:CL[0].id;body=`<h2>Add student</h2><label>Name</label><input id="f_n"><label>Class</label><select id="f_c">${CL.map(c=>`<option value="${c.id}" ${c.id===dc?"selected":""}>${esc(c.name)}</option>`).join("")}</select><label>Gender</label><select id="f_g"><option>Male</option><option>Female</option></select><label>Parent's number</label><input id="f_p" type="tel">${btns("doadd","Save student")}`}
+  if(sh.k==="ren"){const s=find(sh.id);body=`<h2>Rename student</h2><input id="f_n" value="${esc(s?.name)}">${btns("doren","Save")}`}
+  if(sh.k==="conf")body=`<h2>${esc(sh.title)}</h2><p class="lbl">${esc(sh.msg)}</p>${btns("yes",sh.btn)}`;
+  if(sh.k==="ses"){const [a,b]=sessions[sessions.length-1].split("/").map(Number);body=`<h2>Start a new session</h2><p class="lbl">Fees for the new session start fresh. Anything still owed shows as arrears.</p><label>Session</label><input id="f_n" value="${a+1}/${b+1}">${btns("doses","Create session")}`}
+  if(sh.k==="pay"){const s=find(sh.id);if(!s){sh=null;return modal()}const {ty,tt}=sh,l=pays(s,ty,S,tt),f=fee(s,ty,S,tt),p=paid(s,ty,S,tt);
+    body=`<h2>${esc(s.name)}</h2><div class="lbl">${tl(ty)} · ${tn(tt)} · ${S}</div><div class="big" style="color:var(--grn)">${naira(p)}</div><div class="lbl">paid of ${naira(f)} · balance ${naira(f-p)}</div>
+    <label>${tl(ty)} fee for this student (₦)</label><input id="f_fee" type="number" min="0" inputmode="numeric" value="${f||""}">
+    <div style="margin-top:10px">${l.map(x=>`<div class="pay"><span>${naira(x.amt)}<br><span class="lbl">${esc(x.date||"no date")}</span></span>${role==="admin"?`<button class="ic" data-dp="${x.id}" aria-label="Delete payment">🗑️</button>`:""}</div>`).join("")||`<p class="lbl">No payments yet.</p>`}</div>
+    <label>New payment (₦)</label><input id="f_a" type="number" min="0" inputmode="numeric"><label>Date</label><input id="f_d" type="date" value="${new Date().toISOString().slice(0,10)}">
+    <div class="row" style="margin-top:14px"><button class="btn ghost" data-a="close">Close</button><button class="btn" data-a="dopay" style="flex:1">Add payment</button></div>`}
+  if(sh.k==="pw")body=`<h2>Change password</h2><label>New password (at least 8 characters)</label><input id="f_n" type="password" autocomplete="new-password"><div class="err" id="e"></div>${btns("dopw","Save password")}`;
+  m.innerHTML=`<div class="modal" data-a="bg"><div class="sheet">${body}</div></div>`;
+  const ff=$("f_fee");if(ff)ff.onchange=()=>{const s=find(sh.id),{ty,tt}=sh;save({...s,fees:{...(s.fees||{}),[key(ty,S,tt)]:num(ff.value)}});logit(`Set ${tl(ty)} fee for ${s.name} to ${naira(ff.value)} (${tn(tt)} ${S})`);render()}}
+
+document.addEventListener("click",async e=>{
+  const t=e.target.closest("[data-v],[data-a],[data-t],[data-ac],[data-ren],[data-pay],[data-dp],[data-arch],[data-rest],[data-mv],[data-rc]");if(!t)return;const d=t.dataset;
+  if(d.a==="bg"&&e.target!==t)return;
+  if(d.v){if(d.v!==view){history.pushState({v:d.v},"");navDepth++}view=d.v;q="";menuOpen=false;window.scrollTo(0,0);return render()}
+  if(d.t){T=d.t;return render()}if(d.ac){A=d.ac;return render()}
+  if(d.ren){sh={k:"ren",id:d.ren};return render()}
+  if(d.pay){sh={k:"pay",id:d.pay,ty:d.ty,tt:d.tt};return render()}
+  if(d.dp){const s=find(sh.id),{ty,tt}=sh,p=pays(s,ty,S,tt).find(x=>x.id===d.dp),ps={...(s.payments||{})};ps[key(ty,S,tt)]=pays(s,ty,S,tt).filter(x=>x.id!==d.dp);save({...s,payments:ps});logit(`DELETED ${naira(p&&p.amt)} ${tl(ty)} payment of ${s.name} (${tn(tt)} ${S})`);return render()}
+  if(d.arch){const s=find(d.arch);save({...s,status:"archived"});logit(`Archived ${s.name}`);return render()}
+  if(d.rest){const s=find(d.rest);save({...s,status:"active"});logit(`Restored ${s.name}`);return render()}
+  if(d.mv){const [i,dir]=d.mv.split(":").map(Number),j=i+dir;if(j<0||j>=CL.length)return;[CL[i],CL[j]]=[CL[j],CL[i]];saveCL();return render()}
+  if(d.rc){CL=CL.filter(c=>c.id!==d.rc);saveCL();return render()}
+  const a=d.a;
+  if(a==="close"||a==="bg"){sh=null;return render()}
+  if(a==="yes"){const f=sh.fn;sh=null;f&&f();return render()}
+  if(a==="signout"){await sb.auth.signOut();try{if("caches" in window){const ks=await caches.keys();await Promise.all(ks.map(k=>caches.delete(k)))}}catch(e){}location.reload();return}
+  if(a==="exp")return exportCSV();
+  if(a==="pw"){sh={k:"pw"};menuOpen=false;return render()}
+  if(a==="ses"){sh={k:"ses"};menuOpen=false;return render()}
+  if(a==="add"){sh={k:"add"};return render()}
+  if(a==="addc"){const n=$("nc").value.trim();if(!n)return;CL.push({id:uid(),name:n});saveCL();logit(`Added class ${n}`);return render()}
+  if(a==="applycf"){const amt=num($("cf").value);if(!amt)return;const c=CL.find(x=>x.id===view),lab=tl(A),k=key(A);
+    sh={k:"conf",title:`Set ${lab} to ${naira(amt)}?`,msg:`Applies to all ${inCls(view).length} students in ${c.name} for ${tn(T)} ${S}, replacing any individual amounts.`,btn:"Apply",fn:()=>{CF[c.id+"_"+k]=amt;saveCF();inCls(c.id).forEach(s=>save({...s,fees:{...(s.fees||{}),[k]:amt}}));logit(`Set ${lab} for ${c.name} to ${naira(amt)} (${tn(T)} ${S})`)}};return render()}
+  if(a==="promo"){const i=+d.i,c=CL[i],nx=CL[i+1],ids=[...document.querySelectorAll(`[data-pc="${c.id}"]:checked`)].map(x=>x.dataset.sid);if(!ids.length)return;
+    sh={k:"conf",title:nx?`Promote ${ids.length} student(s)?`:`Graduate ${ids.length} student(s)?`,msg:nx?`${c.name} → ${nx.name}.`:`They will move to Archive & graduated.`,btn:nx?"Promote":"Graduate",fn:()=>{ids.forEach(id=>{const s=find(id);if(s)save(nx?{...s,fees:freeze(s),cls:nx.id}:{...s,fees:freeze(s),status:"graduated"})});logit(nx?`Promoted ${ids.length} students ${c.name} → ${nx.name}`:`Graduated ${ids.length} students from ${c.name}`)}};return render()}
+  if(a==="doses"){const n=$("f_n").value.trim();if(!/^\d{4}\/\d{4}$/.test(n)||sessions.includes(n))return;sessions.push(n);S=n;T="t1";saveMeta();logit(`Started session ${n}`);sh=null;return render()}
+  if(a==="doadd"){const n=$("f_n").value.trim();if(!n)return $("f_n").focus();const c=$("f_c").value,fees={};
+    for(const [se,t] of periods()){if(se===S&&t===T)break;TYPES.forEach(([ty])=>fees[key(ty,se,t)]=0)}
+    save({id:uid(),name:n,cls:c,gender:$("f_g").value,phone:$("f_p").value.trim(),fees,payments:{},status:"active"});logit(`Added student ${n} (${cname(c)})`);sh=null;return render()}
+  if(a==="doren"){const n=$("f_n").value.trim(),s=find(sh.id);if(n&&n!==s.name){logit(`Renamed ${s.name} → ${n}`);save({...s,name:n})}sh=null;return render()}
+  if(a==="dopay"){const amt=num($("f_a").value);if(amt<=0)return $("f_a").focus();const s=find(sh.id),{ty,tt}=sh,ps={...(s.payments||{})};
+    ps[key(ty,S,tt)]=[...pays(s,ty,S,tt),{id:uid(),amt,date:$("f_d").value,by:me}];save({...s,payments:ps});logit(`Recorded ${naira(amt)} ${tl(ty)} payment for ${s.name} (${tn(tt)} ${S})`);return render()}
+  if(a==="dopw"){const n=$("f_n").value;if(n.length<8)return $("e").textContent="At least 8 characters.";const r=await sb.auth.updateUser({password:n});if(r.error)return $("e").textContent=r.error.message;logit("Password changed");sh=null;return render()}
+});
+$("bk").onclick=()=>{if(navDepth>0)history.back();else{view="dash";render()}};
+window.addEventListener("popstate",e=>{navDepth=Math.max(0,navDepth-1);
+  if(sh||menuOpen){sh=null;menuOpen=false;history.pushState({v:view},"");navDepth++;return render()}
+  view=(e.state&&e.state.v)||"dash";q="";render()});
+$("bb").onclick=()=>{menuOpen=true;nav()};$("scrim").onclick=()=>{menuOpen=false;nav()};
+document.addEventListener("focusout",()=>{if(pending)setTimeout(()=>{if(!document.activeElement.matches("input,select"))render()},50)});
+
+function exportCSV(){const q=v=>{let s=String(v??"");if(/^[=+\-@]/.test(s))s="'"+s;return '"'+s.replace(/"/g,'""')+'"'},dl=(n,rows)=>{const b=new Blob(["\ufeff"+rows.map(r=>r.map(q).join(",")).join("\n")],{type:"text/csv"}),a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=n;document.body.appendChild(a);a.click();a.remove()},d=new Date().toISOString().slice(0,10);
+  dl(`students-${d}.csv`,[["Name","Class","Status","Gender","Phone","Overall balance"],...students.map(s=>[s.name,cname(s.cls),s.status,s.gender,s.phone,owedAll(s)])]);
+  dl(`payments-${d}.csv`,[["Student","Class","Session","Term","Type","Amount","Date","Recorded by"],...students.flatMap(s=>Object.keys(s.payments||{}).flatMap(k=>{const p=pk(k);return s.payments[k].map(x=>[s.name,cname(s.cls),p.se,tn(p.t),tl(p.ty),x.amt,x.date,x.by])}))]);logit("Exported backup")}
+const busy=()=>document.activeElement&&document.activeElement.matches("input,select");
+const page=async(t,ord)=>{let out=[],i=0;for(;;){let q=sb.from(t).select("*");ord.forEach(o=>q=q.order(o));const r=await q.range(i,i+999);if(r.error)throw r.error;out=out.concat(r.data);if(r.data.length<1000)return out;i+=1000}};
+async function load(){try{
+  const [c,se,st,fe,cf,pa,lg]=await Promise.all([page("classes",["position","id"]),page("sessions",["position","name"]),page("students",["id"]),page("fees",["student_id","session","term","type"]),page("class_fees",["class_id","session","term","type"]),page("payments",["id"]),sb.from("activity_log").select("*").order("at",{ascending:false}).limit(300)]);
+  if(lg.error)throw lg.error;
+  if(c.length)CL=c.map(x=>({id:x.id,name:x.name}));
+  sessions=se.map(x=>x.name);if(!sessions.includes(S))S=sessions[sessions.length-1]||"";
+  const fm={},pm={};
+  fe.forEach(r=>{(fm[r.student_id]??={})[key(r.type,r.session,r.term)]=num(r.amount)});
+  pa.sort((a,b)=>String(a.created_at).localeCompare(String(b.created_at))).forEach(r=>{const k=key(r.type,r.session,r.term);((pm[r.student_id]??={})[k]??=[]).push({id:r.id,amt:num(r.amount),date:r.paid_on||"",by:r.recorded_name||""})});
+  students=st.map(x=>({id:x.id,name:x.name,cls:x.class_id,gender:x.gender||"",phone:x.phone||"",status:x.status,fees:fm[x.id]||{},payments:pm[x.id]||{}}));
+  CF={};cf.forEach(r=>CF[r.class_id+"_"+key(r.type,r.session,r.term)]=num(r.amount));
+  logs=lg.data.map(r=>({ts:Date.parse(r.at),by:r.by_name,a:r.action}));
+  const m=await sb.from("app_meta").select("value").eq("key","schema_version").maybeSingle();
+  ban(num(m.data&&m.data.value)<REQUIRED_SCHEMA?"The database needs an update. Run the newest script from the migrations folder in Supabase (SQL Editor). Your data is not touched.":"");return true
+}catch(e){console.error(e);ban("Could not load data: "+(e.message||e)+". Check that schema.sql ran completely and that config.js has the right URL and key.");return false}}
+let tmr;const refresh=()=>{clearTimeout(tmr);tmr=setTimeout(async()=>{if(inflight||busy()||sh)return refresh();if(await load())render()},800)};
+function loginUI(msg){const L=$("lock");L.style.display="flex";
+  L.innerHTML=`<div class="card"><div style="font-size:34px">🏫</div><h2 style="margin:6px 0">School Ledger</h2><p class="lbl">Sign in with your staff account</p><input id="em" type="email" placeholder="Email" autocomplete="username" style="width:100%;margin-bottom:8px"><input id="pw" type="password" placeholder="Password" autocomplete="current-password" style="width:100%"><div class="err" id="pe">${esc(msg||"")}</div><button class="btn" id="pg" style="width:100%">Sign in</button></div>`;
+  const go=async()=>{$("pe").textContent="";const r=await sb.auth.signInWithPassword({email:$("em").value.trim(),password:$("pw").value});if(r.error)return $("pe").textContent=r.error.message;start(r.data.user)};
+  $("pg").onclick=go;$("pw").onkeydown=e=>{if(e.key==="Enter")go()}}
+async function start(u){const p=await sb.from("profiles").select("*").eq("id",u.id).maybeSingle();
+  if(p.error||!p.data){await sb.auth.signOut();return loginUI("This account has no access yet. Ask the school administrator.")}
+  me=p.data.name;role=p.data.role;$("lock").style.display="none";$("st").textContent="Loading…";
+  if(await load()){history.replaceState({v:view},"");render();sb.channel("ledger").on("postgres_changes",{event:"*",schema:"public"},refresh).subscribe();
+    setInterval(()=>{if(!document.hidden)refresh()},90000);document.addEventListener("visibilitychange",()=>{if(!document.hidden)refresh()})}}
+window.addEventListener("online",()=>role&&render());window.addEventListener("offline",()=>role&&render());
+if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
+if(typeof supabase==="undefined")ban("The app library (supabase.js) did not load. Upload the whole folder, not just index.html.");
+else if(typeof SUPABASE_URL==="undefined"||SUPABASE_URL.includes("YOUR-PROJECT")){document.body.innerHTML='<p style="padding:24px;font-family:sans-serif">Open <b>config.js</b> and paste your Supabase URL and public key.</p>'}
+else{sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);sb.auth.getSession().then(({data})=>data.session?start(data.session.user):loginUI())}
+</script></body></html>
