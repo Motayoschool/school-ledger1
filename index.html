@@ -52,7 +52,7 @@ td.p{padding:8px;white-space:nowrap}
 <script>
 const CLS0=[["Playgroup","Pre Creche"],["Creche"],["Nursery 1"],["Nursery 2"],["Nursery 3"],["Primary 1"],["Primary 2"],["Primary 3"],["Primary 4"],["Primary 5"],["Primary 6"],["JSS 1"],["JSS 2"],["JSS 3"]].map(a=>({id:a[0],name:a[1]||a[0]}));
 const TERMS=[["t1","1st Term"],["t2","2nd Term"],["t3","3rd Term"]],TYPES=[["fee","School fee"],["uniform","Uniform"],["books","Books"]];
-const APP_VERSION="1.0.2",REQUIRED_SCHEMA=1;
+const APP_VERSION="1.0.3",REQUIRED_SCHEMA=1;
 let students=[],CF={},CL=CLS0,sessions=[],S="",logs=[],me="Staff",role="staff",sb=null,inflight=0;
 let view="dash",T="t1",A="all",q="",dcls="all",sh=null,menuOpen=false,pending=false;
 let navDepth=0;try{const z=JSON.parse(localStorage.getItem("lv")||"{}");if(z.view)view=z.view;if(z.T)T=z.T;if(z.A)A=z.A;if(z.S)S=z.S}catch(e){}
@@ -101,7 +101,7 @@ const ctl=m=>`<select id="ss" style="width:100%;margin-bottom:8px">${sessions.ma
 function pills(l){const e=sum(l,Fx),c=sum(l,Px),ar=sum(l,arrears);return `<div class="pills"><div class="pill"><span class="lbl">Expected</span><b>${naira(e)}</b></div><div class="pill"><span class="lbl">Collected</span><b style="color:var(--grn)">${naira(c)}</b></div><div class="pill"><span class="lbl">Outstanding</span><b style="color:var(--red)">${naira(Math.max(e-c,0))}</b></div></div><div class="lbl" style="margin:-4px 0 12px">Arrears brought forward: <b>${naira(ar)}</b></div>`}
 
 function nav(){const it=(v,l)=>`<button data-v="${v}" class="${view===v?"on":""}">${l}</button>`;
-  $("nav").innerHTML=it("dash","🏠 Dashboard")+it("def","📋 Defaulters")+`<hr><div class="lbl" style="margin:4px 8px">CLASSES</div>`+CL.map(c=>`<button data-v="${c.id}" class="${view===c.id?"on":""}"><span>${esc(c.name)}</span><span>${inCls(c.id).length}</span></button>`).join("")+`<hr>`+(role==="admin"?it("promo","🎓 Promote / Graduate"):"")+it("arch","📦 Archive")+(role==="admin"?it("cls","⚙️ Manage classes"):"")+it("log","🧾 Activity log")+(role==="admin"?`<button data-a="ses">➕ New session</button><button data-a="exp">⬇ Export backup (CSV)</button>`:"")+`<hr><div class="lbl" style="margin:4px 8px">${esc(me)} · ${role}</div><button data-a="pw">🔑 Change password</button><button data-a="signout">🚪 Sign out</button><div class="lbl" style="margin:8px">Version ${APP_VERSION}</div>`;
+  $("nav").innerHTML=it("dash","🏠 Dashboard")+it("def","📋 Defaulters")+`<hr><div class="lbl" style="margin:4px 8px">CLASSES</div>`+CL.map(c=>`<button data-v="${c.id}" class="${view===c.id?"on":""}"><span>${esc(c.name)}</span><span>${inCls(c.id).length}</span></button>`).join("")+`<hr>`+(role==="admin"?it("promo","🎓 Promote / Graduate"):"")+it("arch","📦 Archive")+(role==="admin"?it("cls","⚙️ Manage classes"):"")+it("log","🧾 Activity log")+(role==="admin"?`<button data-a="ses">➕ New session</button><button data-a="imp">⬆ Import students (Excel)</button><button data-a="exp">⬇ Export backup (CSV)</button>`:"")+`<hr><div class="lbl" style="margin:4px 8px">${esc(me)} · ${role}</div><button data-a="pw">🔑 Change password</button><button data-a="signout">🚪 Sign out</button><div class="lbl" style="margin:8px">Version ${APP_VERSION}</div>`;
   $("nav").classList.toggle("open",menuOpen);$("scrim").classList.toggle("show",menuOpen)}
 
 function render(){pending=false;nav();try{localStorage.setItem("lv",JSON.stringify({view,T,A,S}))}catch(e){}$("bk").style.display=view==="dash"?"none":"";$("st").textContent=navigator.onLine?"● synced":"● offline";const M=$("main");
@@ -181,9 +181,10 @@ function modal(){const m=$("modal");if(!sh){m.innerHTML="";return}let body="";
     <div style="margin-top:10px">${l.map(x=>`<div class="pay"><span>${naira(x.amt)}<br><span class="lbl">${esc(x.date||"no date")}</span></span>${role==="admin"?`<button class="ic" data-dp="${x.id}" aria-label="Delete payment">🗑️</button>`:""}</div>`).join("")||`<p class="lbl">No payments yet.</p>`}</div>
     <label>New payment (₦)</label><input id="f_a" type="number" min="0" inputmode="numeric"><label>Date</label><input id="f_d" type="date" value="${new Date().toISOString().slice(0,10)}">
     <div class="row" style="margin-top:14px"><button class="btn ghost" data-a="close">Close</button><button class="btn" data-a="dopay" style="flex:1">Add payment</button></div>`}
+  if(sh.k==="imp")body=impBody();
   if(sh.k==="pw")body=`<h2>Change password</h2><label>New password (at least 8 characters)</label><input id="f_n" type="password" autocomplete="new-password"><div class="err" id="e"></div>${btns("dopw","Save password")}`;
   m.innerHTML=`<div class="modal" data-a="bg"><div class="sheet">${body}</div></div>`;
-  const ff=$("f_fee");if(ff)ff.onchange=()=>{const s=find(sh.id),{ty,tt}=sh;save({...s,fees:{...(s.fees||{}),[key(ty,S,tt)]:num(ff.value)}});logit(`Set ${tl(ty)} fee for ${s.name} to ${naira(ff.value)} (${tn(tt)} ${S})`);render()}}
+  const fi=$("f_file");if(fi)fi.onchange=impPick;const ff=$("f_fee");if(ff)ff.onchange=()=>{const s=find(sh.id),{ty,tt}=sh;save({...s,fees:{...(s.fees||{}),[key(ty,S,tt)]:num(ff.value)}});logit(`Set ${tl(ty)} fee for ${s.name} to ${naira(ff.value)} (${tn(tt)} ${S})`);render()}}
 
 document.addEventListener("click",async e=>{
   const t=e.target.closest("[data-v],[data-a],[data-t],[data-ac],[data-ren],[data-pay],[data-dp],[data-arch],[data-rest],[data-mv],[data-rc]");if(!t)return;const d=t.dataset;
@@ -202,6 +203,8 @@ document.addEventListener("click",async e=>{
   if(a==="yes"){const f=sh.fn;sh=null;f&&f();return render()}
   if(a==="signout"){await sb.auth.signOut();try{if("caches" in window){const ks=await caches.keys();await Promise.all(ks.map(k=>caches.delete(k)))}}catch(e){}location.reload();return}
   if(a==="exp")return exportCSV();
+  if(a==="imp"||a==="impagain"){if(role!=="admin")return;sh={k:"imp"};menuOpen=false;return render()}
+  if(a==="doimp"){const r=sh&&sh.res;if(role!=="admin"||!r||!r.ok.length)return;sh={k:"imp",busy:"Importing…"};render();return impCommit(r)}
   if(a==="pw"){sh={k:"pw"};menuOpen=false;return render()}
   if(a==="ses"){sh={k:"ses"};menuOpen=false;return render()}
   if(a==="add"){sh={k:"add"};return render()}
@@ -225,6 +228,87 @@ window.addEventListener("popstate",e=>{navDepth=Math.max(0,navDepth-1);
   view=(e.state&&e.state.v)||"dash";q="";render()});
 $("bb").onclick=()=>{menuOpen=true;nav()};$("scrim").onclick=()=>{menuOpen=false;nav()};
 document.addEventListener("focusout",()=>{if(pending)setTimeout(()=>{if(!document.activeElement.matches("input,select"))render()},50)});
+
+/*IMPORT-START*/
+let _xl;const loadXLSX=()=>_xl||(_xl=new Promise((ok,no)=>{if(window.XLSX)return ok(window.XLSX);
+  const get=src=>new Promise((y,n)=>{const s=document.createElement("script");s.src=src;s.onload=y;s.onerror=n;document.head.appendChild(s)});
+  get("xlsx.full.min.js").catch(()=>get("https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js")).then(()=>window.XLSX?ok(window.XLSX):no(new Error("reader missing"))).catch(()=>{_xl=null;no(new Error("Could not load the Excel reader. Check your internet, and that xlsx.full.min.js was uploaded with index.html."))})}));
+const IMP_COLS={name:["name","names","studentname","studentsname","fullname","fullnames","pupilname","pupilsname","student","pupil","nameofstudent","nameofpupil"],
+  cls:["class","classname","grade","level","currentclass"],gender:["gender","sex"],
+  phone:["phone","phonenumber","phoneno","parentsnumber","parentnumber","parentsphone","parentphone","parentsphonenumber","parentphonenumber","guardianphone","guardiannumber","contact","contactnumber","parentscontact","mobile","mobilenumber","tel","telephone"],
+  fee:["schoolfee","schoolfees","fee","fees","tuition"],uniform:["uniform"],books:["books","book"]};
+const IMP_SKIP=["instructions","lists","classes","readme","help"];
+const nk=s=>String(s??"").toLowerCase().replace(/[^a-z0-9]/g,"");
+const ncls=s=>nk(s).replace(/^pry/,"primary").replace(/^nur(?!sery)/,"nursery").replace(/one$/,"1").replace(/two$/,"2").replace(/three$/,"3").replace(/four$/,"4").replace(/five$/,"5").replace(/six$/,"6");
+const nname=s=>String(s||"").toLowerCase().replace(/[^a-z0-9 ]/g," ").split(/\s+/).filter(Boolean).sort().join(" ");
+const cph=v=>{let s=String(v??"").trim();if(!s)return"";
+  return s.split(/[\/,;]|\s{2,}/).map(p=>{p=p.trim().replace(/\.0+$/,"");let d=p.replace(/[^\d+]/g,"");if(d.length<7)return"";
+    d=d.replace(/^\+?234(?=\d{10}$)/,"0");if(/^[789]\d{9}$/.test(d))d="0"+d;return d}).filter(Boolean).join(" / ")};
+const cgen=v=>{const s=String(v||"").trim().toLowerCase();return s.startsWith("m")?"Male":s.startsWith("f")?"Female":""};
+const camt=v=>{const s=String(v??"").replace(/[^\d.]/g,"");return s===""?null:num(s)};
+async function impParse(file){
+  if(file.size>10*1024*1024)throw new Error("File is too big (max 10 MB).");
+  const X=await loadXLSX(),wb=X.read(await file.arrayBuffer(),{type:"array"});
+  const cm=new Map();CL.forEach(c=>{cm.set(ncls(c.name),c);cm.set(ncls(c.id),c)});
+  const have=new Set(students.map(s=>nname(s.name)+"|"+s.cls)),names={};
+  students.forEach(s=>{(names[nname(s.name)]??=[]).push(s.cls)});
+  const res={file:file.name,ok:[],dup:[],bad:[],sheets:[]},seen=new Set();
+  for(const sn of wb.SheetNames){
+    if(IMP_SKIP.includes(nk(sn)))continue;
+    const data=X.utils.sheet_to_json(wb.Sheets[sn],{header:1,defval:"",raw:true,blankrows:false});
+    let hi=-1,col={};
+    for(let i=0;i<Math.min(data.length,15)&&hi<0;i++){const m={};
+      data[i].forEach((h,j)=>{const k=nk(h);if(!k)return;let hit=false;for(const f in IMP_COLS)if(m[f]==null&&IMP_COLS[f].includes(k)){m[f]=j;hit=true;break}if(!hit&&m.phone==null&&/phone|mobile|whatsapp|contact/.test(k))m.phone=j});
+      if(m.name!=null){hi=i;col=m}}
+    if(hi<0)continue;res.sheets.push(sn);
+    for(let i=hi+1;i<data.length;i++){const r=data[i],g=f=>col[f]==null?"":r[col[f]];
+      const name=String(g("name")).replace(/\s+/g," ").trim();
+      if(!name||/^(grand\s*)?total/i.test(name)||/^\d+$/.test(name))continue;
+      const craw=String(col.cls!=null&&String(g("cls")).trim()?g("cls"):sn).trim(),c=cm.get(ncls(craw)),at=`${sn} row ${i+1}`;
+      if(!c){res.bad.push({name,why:`Class "${craw}" is not in the ledger`,at});continue}
+      const k=nname(name)+"|"+c.id;
+      if(have.has(k)||seen.has(k)){res.dup.push({name,cls:c.name});continue}
+      seen.add(k);
+      const fees={};["fee","uniform","books"].forEach(ty=>{if(col[ty]!=null){const a=camt(g(ty));if(a!=null)fees[ty]=a}});
+      const other=(names[nname(name)]||[]).filter(x=>x!==c.id)[0];
+      res.ok.push({name,cls:c,gender:cgen(g("gender")),phone:cph(g("phone")),fees,w:other?`Same name already in ${cname(other)}`:""})}}
+  if(!res.sheets.length)throw new Error("Could not find a Name column. The first rows of the sheet need headings like Name and Class.");
+  return res}
+async function impCommit(res){
+  const made=res.ok.map(r=>{const fees={};
+    for(const [se,t] of periods()){if(se===S&&t===T)break;TYPES.forEach(([ty])=>fees[key(ty,se,t)]=0)}
+    for(const ty in r.fees)fees[key(ty)]=r.fees[ty];
+    return{id:uid(),name:r.name,cls:r.cls.id,gender:r.gender,phone:r.phone,fees,payments:{},status:"active"}});
+  const total=made.length;let done=0,err=null;inflight++;
+  try{for(let i=0;i<total&&!err;i+=100){const part=made.slice(i,i+100);
+    sh={k:"imp",busy:`Importing ${Math.min(i+100,total)} of ${total}…`};render();
+    const e1=(await sb.from("students").upsert(part.map(s=>({id:s.id,name:s.name,class_id:s.cls,gender:s.gender||null,phone:s.phone||null,status:"active"})))).error;
+    if(e1){err=e1;break}
+    students.push(...part);done+=part.length;
+    const fr=part.flatMap(s=>Object.keys(s.fees).map(k=>{const q=pk(k);return{student_id:s.id,session:q.se,term:q.t,type:q.ty,amount:num(s.fees[k])}}));
+    for(let j=0;j<fr.length&&!err;j+=1000){const e2=(await sb.from("fees").upsert(fr.slice(j,j+1000))).error;if(e2)err=e2}}
+  }catch(e){err=e}finally{inflight--}
+  if(done)logit(`Imported ${done} students from ${res.file}`);
+  sh={k:"imp",done:{n:done,total,dup:res.dup.length,bad:res.bad.length,err:err&&(err.message||String(err))}};render()}
+const impPick=async e=>{const f=e.target.files[0];if(!f)return;sh={k:"imp",busy:"Reading "+f.name+"…"};render();
+  try{sh={k:"imp",res:await impParse(f)}}catch(x){console.error(x);sh={k:"imp",err:x.message||String(x)}}render()};
+function impBody(){
+  if(sh.busy)return `<h2>Import students</h2><p class="lbl">${esc(sh.busy)}</p>`;
+  if(sh.done){const d=sh.done;return `<h2>${d.err?"Import stopped":"Import complete ✓"}</h2><p>${d.n} of ${d.total} students added to the ledger.</p>${d.dup?`<p class="lbl">${d.dup} already in the ledger were skipped.</p>`:""}${d.bad?`<p class="lbl">${d.bad} rows were not imported.</p>`:""}${d.err?`<div class="err">${esc(d.err)}<br>Import the file again to add the rest. Students already saved are skipped automatically.</div>`:""}<div class="row" style="margin-top:14px"><button class="btn" data-a="close" style="flex:1">Done</button></div>`}
+  const r=sh.res;
+  if(!r)return `<h2>Import students from Excel</h2><p class="lbl" style="margin:0 0 8px">Choose an Excel (.xlsx) or CSV file. Columns read: <b>Name</b>, <b>Class</b>, Gender, Parent's number, and optionally School fee, Uniform, Books (saved for <b>${tn(T)} ${S}</b>). If a sheet has no Class column, the sheet name is used as the class. Students already in the ledger are skipped.</p><p class="lbl" style="margin:0 0 10px">Class names in your ledger: ${CL.map(c=>esc(c.name)).join(", ")}</p><input type="file" id="f_file" accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv" style="padding:8px">${sh.err?`<div class="err" style="margin-top:8px">${esc(sh.err)}</div>`:""}<div class="row" style="margin-top:14px"><button class="btn ghost" data-a="close">Cancel</button></div>`;
+  const by={};r.ok.forEach(s=>by[s.cls.name]=(by[s.cls.name]||0)+1);
+  const more=(a,n)=>a.length>n?`<div class="lbl">…and ${a.length-n} more</div>`:"",warn=r.ok.filter(s=>s.w),hasFee=r.ok.some(s=>Object.keys(s.fees).length);
+  return `<h2>Check before importing</h2><div class="lbl">${esc(r.file)}</div>
+  <div class="pay"><span>✅ Ready to import</span><b>${r.ok.length}</b></div>
+  ${r.ok.length?`<div class="lbl" style="margin:6px 0">${Object.keys(by).map(n=>esc(n)+" "+by[n]).join(" · ")}</div>`:""}
+  ${hasFee?`<div class="lbl" style="margin:6px 0">Fee columns will be saved for ${tn(T)} ${S}.</div>`:""}
+  <div class="pay"><span>⏭ Already in ledger (skipped)</span><b>${r.dup.length}</b></div>
+  <div class="pay"><span>❌ Cannot import</span><b style="color:var(--red)">${r.bad.length}</b></div>
+  ${r.bad.slice(0,10).map(b=>`<div class="lbl" style="margin-top:4px">${esc(b.name)} <span style="color:var(--red)">· ${esc(b.why)}</span> (${esc(b.at)})</div>`).join("")}${more(r.bad,10)}
+  ${warn.length?`<div class="pay" style="margin-top:6px"><span>⚠ Check these (still imported)</span><b>${warn.length}</b></div>${warn.slice(0,5).map(s=>`<div class="lbl" style="margin-top:4px">${esc(s.name)} · ${esc(s.w)}</div>`).join("")}${more(warn,5)}`:""}
+  <div class="row" style="margin-top:14px"><button class="btn ghost" data-a="impagain">Other file</button><button class="btn ghost" data-a="close">Cancel</button><button class="btn" data-a="doimp" style="flex:1" ${r.ok.length?"":"disabled"}>Import ${r.ok.length}</button></div>`}
+/*IMPORT-END*/
 
 function exportCSV(){const q=v=>{let s=String(v??"");if(/^[=+\-@]/.test(s))s="'"+s;return '"'+s.replace(/"/g,'""')+'"'},dl=(n,rows)=>{const b=new Blob(["\ufeff"+rows.map(r=>r.map(q).join(",")).join("\n")],{type:"text/csv"}),a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=n;document.body.appendChild(a);a.click();a.remove()},d=new Date().toISOString().slice(0,10);
   dl(`students-${d}.csv`,[["Name","Class","Status","Gender","Phone","Overall balance"],...students.map(s=>[s.name,cname(s.cls),s.status,s.gender,s.phone,owedAll(s)])]);
