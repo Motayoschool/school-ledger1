@@ -52,7 +52,7 @@ td.p{padding:8px;white-space:nowrap}
 <script>
 const CLS0=[["Playgroup","Pre Creche"],["Creche"],["Nursery 1"],["Nursery 2"],["Nursery 3"],["Primary 1"],["Primary 2"],["Primary 3"],["Primary 4"],["Primary 5"],["Primary 6"],["JSS 1"],["JSS 2"],["JSS 3"]].map(a=>({id:a[0],name:a[1]||a[0]}));
 const TERMS=[["t1","1st Term"],["t2","2nd Term"],["t3","3rd Term"]],TYPES=[["fee","School fee"],["uniform","Uniform"],["books","Books"]];
-const APP_VERSION="1.0.4",REQUIRED_SCHEMA=1;
+const APP_VERSION="1.0.5",REQUIRED_SCHEMA=1;
 let students=[],CF={},CL=CLS0,sessions=[],S="",logs=[],me="Staff",role="staff",sb=null,inflight=0;
 let view="dash",T="t1",A="all",q="",dcls="all",sh=null,menuOpen=false,pending=false;
 let navDepth=0;try{const z=JSON.parse(localStorage.getItem("lv")||"{}");if(z.view)view=z.view;if(z.T)T=z.T;if(z.A)A=z.A;if(z.S)S=z.S}catch(e){}
@@ -159,8 +159,9 @@ function promo(M){$("title").textContent="Promote / Graduate";
   CL.map((c,i)=>i).reverse().map(i=>{const c=CL[i],nx=CL[i+1],l=inCls(c.id).sort((a,b)=>a.name.localeCompare(b.name));if(!l.length)return"";
   return `<div class="card"><b>${esc(c.name)} → ${nx?esc(nx.name):"Graduate 🎓"}</b>${l.map(s=>`<label class="pay"><span>${esc(s.name)}</span><input type="checkbox" data-pc="${c.id}" data-sid="${s.id}" checked style="width:auto"></label>`).join("")}<button class="btn" data-a="promo" data-i="${i}" style="width:100%;margin-top:10px">${nx?"Promote selected":"Graduate selected"}</button></div>`}).join("")}
 
-function arch(M){$("title").textContent="Archive & graduated";const l=students.filter(s=>(s.status||"active")!=="active").sort((a,b)=>a.name.localeCompare(b.name));
-  M.innerHTML=`<div class="card">${l.map(s=>`<div class="pay"><span data-v="stu:${s.id}" style="cursor:pointer">${esc(s.name)}<br><span class="lbl">${esc(cname(s.cls))} · ${s.status}${owedAll(s)>0?" · owes "+naira(owedAll(s)):""}</span></span><button class="btn ghost" data-rest="${s.id}">♻️ Restore</button></div>`).join("")||`<p class="lbl">Nothing archived yet. Archived and graduated students keep all their records.</p>`}</div>`}
+function arch(M){$("title").textContent="Archive & graduated";const l=students.filter(s=>(s.status||"active")!=="active").sort((a,b)=>a.name.localeCompare(b.name)),adm=role==="admin";
+  M.innerHTML=(adm?`<div class="card"><div class="row" style="margin:0"><button class="btn red" data-a="clrarch" ${l.length?"":"disabled"}>🗑 Clear all (${l.length})</button><button class="btn ghost" data-a="setpin">🔑 Owner password</button></div><p class="lbl" style="margin:8px 0 0">Deleting is permanent and always asks for the owner password. Export a backup first.</p></div>`:"")+
+  `<div class="card">${l.map(s=>`<div class="pay"><span data-v="stu:${s.id}" style="cursor:pointer">${esc(s.name)}<br><span class="lbl">${esc(cname(s.cls))} · ${s.status}${owedAll(s)>0?" · owes "+naira(owedAll(s)):""}</span></span><span style="display:flex;gap:6px"><button class="btn ghost" data-rest="${s.id}">♻️ Restore</button>${adm?`<button class="btn red" data-del="${s.id}" aria-label="Delete permanently">🗑</button>`:""}</span></div>`).join("")||`<p class="lbl">Nothing archived yet. Archived and graduated students keep all their records.</p>`}</div>`}
 
 function mcls(M){$("title").textContent="Manage classes";
   M.innerHTML=`<div class="card"><p class="lbl" style="margin-top:0">Renaming keeps every student, fee and payment. The order decides which class students are promoted into.</p>${CL.map((c,i)=>{const n=students.filter(s=>s.cls===c.id).length;return `<div class="row"><input data-cn="${c.id}" value="${esc(c.name)}"><button class="ic" data-mv="${i}:-1">▲</button><button class="ic" data-mv="${i}:1">▼</button>${n?`<span class="lbl">${n} 👤</span>`:`<button class="ic" data-rc="${c.id}">✕</button>`}</div>`}).join("")}<div class="row"><input id="nc" placeholder="New class name"><button class="btn" data-a="addc">Add class</button></div></div>`;
@@ -189,12 +190,14 @@ function modal(){const m=$("modal");if(!sh){m.innerHTML="";return}let body="";
     <label>New payment (₦)</label><input id="f_a" type="number" min="0" inputmode="numeric"><label>Date</label><input id="f_d" type="date" value="${new Date().toISOString().slice(0,10)}">
     <div class="row" style="margin-top:14px"><button class="btn ghost" data-a="close">Close</button><button class="btn" data-a="dopay" style="flex:1">Add payment</button></div>`}
   if(sh.k==="imp")body=impBody();
+  if(sh.k==="delpin"){const one=sh.mode==="one";body=`<h2>${one?"Delete "+esc(sh.name)+"?":"Clear the whole archive?"}</h2><p class="lbl">${one?"This student and all their fees and payments will be erased for good.":`All ${sh.n} archived and graduated students, with their fees and payments, will be erased for good.`} This cannot be undone.</p><label>Owner password</label><input id="f_pin" type="password" autocomplete="off"><div class="err" id="e"></div><div class="row" style="margin-top:14px"><button class="btn ghost" data-a="close">Cancel</button><button class="btn red" data-a="dodel" style="flex:1">${one?"Delete permanently":"Delete all"}</button></div>`}
+  if(sh.k==="setpin")body=`<h2>${sh.has?"Change":"Set"} owner password</h2><p class="lbl">At least 6 characters. Only the owner should know it. It is needed to permanently delete from the archive.</p>${sh.has?`<label>Current owner password</label><input id="f_old" type="password" autocomplete="off">`:""}<label>New owner password</label><input id="f_new" type="password" autocomplete="new-password"><label>Repeat new password</label><input id="f_new2" type="password" autocomplete="new-password"><div class="err" id="e"></div><div class="row" style="margin-top:14px"><button class="btn ghost" data-a="close">Cancel</button><button class="btn" data-a="dosetpin" style="flex:1">Save password</button></div>`;
   if(sh.k==="pw")body=`<h2>Change password</h2><label>New password (at least 8 characters)</label><input id="f_n" type="password" autocomplete="new-password"><div class="err" id="e"></div>${btns("dopw","Save password")}`;
   m.innerHTML=`<div class="modal" data-a="bg"><div class="sheet">${body}</div></div>`;
   const fi=$("f_file");if(fi)fi.onchange=impPick;const ff=$("f_fee");if(ff)ff.onchange=()=>{const s=find(sh.id),{ty,tt}=sh;save({...s,fees:{...(s.fees||{}),[key(ty,S,tt)]:num(ff.value)}});logit(`Set ${tl(ty)} fee for ${s.name} to ${naira(ff.value)} (${tn(tt)} ${S})`);render()}}
 
 document.addEventListener("click",async e=>{
-  const t=e.target.closest("[data-v],[data-a],[data-lf],[data-t],[data-ac],[data-ren],[data-pay],[data-dp],[data-arch],[data-rest],[data-mv],[data-rc]");if(!t)return;const d=t.dataset;
+  const t=e.target.closest("[data-v],[data-a],[data-lf],[data-del],[data-t],[data-ac],[data-ren],[data-pay],[data-dp],[data-arch],[data-rest],[data-mv],[data-rc]");if(!t)return;const d=t.dataset;
   if(d.a==="bg"&&e.target!==t)return;
   if(d.v){if(d.v!==view){history.pushState({v:d.v},"");navDepth++}view=d.v;q="";menuOpen=false;window.scrollTo(0,0);return render()}
   if(d.lf){lf=d.lf;return render()}
@@ -202,6 +205,7 @@ document.addEventListener("click",async e=>{
   if(d.ren){sh={k:"ren",id:d.ren};return render()}
   if(d.pay){sh={k:"pay",id:d.pay,ty:d.ty,tt:d.tt};return render()}
   if(d.dp){const s=find(sh.id),{ty,tt}=sh,p=pays(s,ty,S,tt).find(x=>x.id===d.dp),ps={...(s.payments||{})};ps[key(ty,S,tt)]=pays(s,ty,S,tt).filter(x=>x.id!==d.dp);save({...s,payments:ps});logit(`DELETED ${naira(p&&p.amt)} ${tl(ty)} payment of ${s.name} (${tn(tt)} ${S})`);return render()}
+  if(d.del){if(role!=="admin")return;const s=find(d.del);if(!s)return;sh={k:"delpin",mode:"one",id:s.id,name:s.name};return render()}
   if(d.arch){const s=find(d.arch);save({...s,status:"archived"});logit(`Archived ${s.name}`);return render()}
   if(d.rest){const s=find(d.rest);save({...s,status:"active"});logit(`Restored ${s.name}`);return render()}
   if(d.mv){const [i,dir]=d.mv.split(":").map(Number),j=i+dir;if(j<0||j>=CL.length)return;[CL[i],CL[j]]=[CL[j],CL[i]];saveCL();return render()}
@@ -212,6 +216,16 @@ document.addEventListener("click",async e=>{
   if(a==="signout"){await sb.auth.signOut();try{if("caches" in window){const ks=await caches.keys();await Promise.all(ks.map(k=>caches.delete(k)))}}catch(e){}location.reload();return}
   if(a==="exp")return exportCSV();
   if(a==="imp"||a==="impagain"){if(role!=="admin")return;sh={k:"imp"};menuOpen=false;return render()}
+  if(a==="clrarch"){if(role!=="admin")return;const n=students.filter(s=>(s.status||"active")!=="active").length;if(!n)return;sh={k:"delpin",mode:"all",n};return render()}
+  if(a==="setpin"){if(role!=="admin")return;const r=await sb.rpc("owner_pin_is_set");if(r.error)return alert(/find the function|schema cache/i.test(r.error.message)?"The owner-password SQL has not been run in Supabase yet.":r.error.message);sh={k:"setpin",has:!!r.data};menuOpen=false;return render()}
+  if(a==="dosetpin"){if(role!=="admin"||!sh)return;const E=$("e"),n=$("f_new").value,n2=$("f_new2").value,o=sh.has?$("f_old").value:null;
+    if(sh.has&&!o)return E.textContent="Type the current owner password.";if(n.length<6)return E.textContent="At least 6 characters.";if(n!==n2)return E.textContent="The two new passwords do not match.";E.textContent="";
+    const r=await sb.rpc("set_owner_pin",{p_new:n,p_old:o});if(r.error)return E.textContent=r.error.message;logit(sh.has?"Owner password changed":"Owner password set");sh=null;render();return alert("Owner password saved.")}
+  if(a==="dodel"){if(role!=="admin"||!sh)return;const pin=$("f_pin").value,E=$("e");if(!pin)return E.textContent="Type the owner password.";
+    const one=sh.mode==="one",nm=sh.name,id=sh.id;E.textContent="";inflight++;let r;try{r=await sb.rpc("delete_archived",{p_pin:pin,p_ids:one?[id]:null})}finally{inflight--}
+    if(r.error){const m=r.error.message||"";return E.textContent=/find the function|schema cache/i.test(m)?"The owner-password SQL has not been run in Supabase yet.":m}
+    const gone=one?[id]:students.filter(s=>(s.status||"active")!=="active").map(s=>s.id);students=students.filter(s=>!gone.includes(s.id));
+    logit(one?`DELETED archived student ${nm} permanently`:`DELETED ${r.data} archived students permanently (Clear archive)`);sh=null;return render()}
   if(a==="doimp"){const r=sh&&sh.res;if(role!=="admin"||!r||!r.ok.length)return;sh={k:"imp",busy:"Importing…"};render();return impCommit(r)}
   if(a==="pw"){sh={k:"pw"};menuOpen=false;return render()}
   if(a==="ses"){sh={k:"ses"};menuOpen=false;return render()}
