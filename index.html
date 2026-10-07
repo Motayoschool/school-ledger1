@@ -52,7 +52,7 @@ td.p{padding:8px;white-space:nowrap}
 <script>
 const CLS0=[["Playgroup","Pre Creche"],["Creche"],["Nursery 1"],["Nursery 2"],["Nursery 3"],["Primary 1"],["Primary 2"],["Primary 3"],["Primary 4"],["Primary 5"],["Primary 6"],["JSS 1"],["JSS 2"],["JSS 3"]].map(a=>({id:a[0],name:a[1]||a[0]}));
 const TERMS=[["t1","1st Term"],["t2","2nd Term"],["t3","3rd Term"]],TYPES=[["fee","School fee"],["uniform","Uniform"],["books","Books"]];
-const APP_VERSION="1.0.3",REQUIRED_SCHEMA=1;
+const APP_VERSION="1.0.4",REQUIRED_SCHEMA=1;
 let students=[],CF={},CL=CLS0,sessions=[],S="",logs=[],me="Staff",role="staff",sb=null,inflight=0;
 let view="dash",T="t1",A="all",q="",dcls="all",sh=null,menuOpen=false,pending=false;
 let navDepth=0;try{const z=JSON.parse(localStorage.getItem("lv")||"{}");if(z.view)view=z.view;if(z.T)T=z.T;if(z.A)A=z.A;if(z.S)S=z.S}catch(e){}
@@ -166,8 +166,15 @@ function mcls(M){$("title").textContent="Manage classes";
   M.innerHTML=`<div class="card"><p class="lbl" style="margin-top:0">Renaming keeps every student, fee and payment. The order decides which class students are promoted into.</p>${CL.map((c,i)=>{const n=students.filter(s=>s.cls===c.id).length;return `<div class="row"><input data-cn="${c.id}" value="${esc(c.name)}"><button class="ic" data-mv="${i}:-1">▲</button><button class="ic" data-mv="${i}:1">▼</button>${n?`<span class="lbl">${n} 👤</span>`:`<button class="ic" data-rc="${c.id}">✕</button>`}</div>`}).join("")}<div class="row"><input id="nc" placeholder="New class name"><button class="btn" data-a="addc">Add class</button></div></div>`;
   M.querySelectorAll("[data-cn]").forEach(el=>el.onchange=()=>{const v=el.value.trim(),c=CL.find(x=>x.id===el.dataset.cn);if(!v||v===c.name)return render();logit(`Renamed class ${c.name} → ${v}`);c.name=v;saveCL();render()})}
 
+let lf="all";
+const LOGT=[["all","All"],["del","🗑️ Deleted"],["pay","💵 Payments"],["fee","🏷️ Fees set"],["stu","👤 Students added"],["edit","✏️ Edits"],["oth","Other"]];
+const logcat=a=>/^DELETED/.test(a)?"del":/^Recorded .* payment/.test(a)?"pay":/^Set /.test(a)?"fee":/^(Imported \d+ students|Added student)/.test(a)?"stu":/^(Renamed|Moved|Archived|Restored|Promoted|Graduated|Added class)/.test(a)?"edit":"oth";
 function logv(M){$("title").textContent="Activity log";
-  M.innerHTML=`<div class="card">${logs.slice(0,200).map(e=>`<div class="pay" style="align-items:flex-start"><span>${esc(e.a)}<br><span class="lbl">${esc(e.by)} · ${new Date(e.ts).toLocaleString()}</span></span></div>`).join("")||`<p class="lbl">No activity yet.</p>`}</div>`}
+  const cnt={};logs.forEach(e=>{const c=logcat(e.a);cnt[c]=(cnt[c]||0)+1});
+  const l=logs.filter(e=>lf==="all"||logcat(e.a)===lf);let last="";
+  M.innerHTML=`<div class="row" style="gap:6px">${LOGT.map(([k,n])=>`<button class="btn ${lf===k?"":"ghost"}" data-lf="${k}" style="padding:7px 12px;border-radius:999px;font-size:13px">${n} · ${k==="all"?logs.length:(cnt[k]||0)}</button>`).join("")}</div>
+  <div class="card">${l.slice(0,500).map(e=>{const d=new Date(e.ts),ds=d.toLocaleDateString(undefined,{weekday:"short",day:"numeric",month:"short",year:"numeric"}),h=ds!==last?(last=ds,`<div class="lbl" style="font-weight:600;padding:10px 0 2px">${esc(ds)}</div>`):"";
+    return h+`<div class="pay" style="align-items:flex-start"><span${logcat(e.a)==="del"?` style="color:var(--red)"`:""}>${esc(e.a)}<br><span class="lbl">${esc(e.by)} · ${esc(d.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}))}</span></span></div>`}).join("")||`<p class="lbl">Nothing here yet.</p>`}</div>`}
 
 function modal(){const m=$("modal");if(!sh){m.innerHTML="";return}let body="";
   const btns=(ok,l)=>`<div class="row" style="margin-top:14px"><button class="btn ghost" data-a="close">Cancel</button><button class="btn" data-a="${ok}" style="flex:1">${l}</button></div>`;
@@ -187,9 +194,10 @@ function modal(){const m=$("modal");if(!sh){m.innerHTML="";return}let body="";
   const fi=$("f_file");if(fi)fi.onchange=impPick;const ff=$("f_fee");if(ff)ff.onchange=()=>{const s=find(sh.id),{ty,tt}=sh;save({...s,fees:{...(s.fees||{}),[key(ty,S,tt)]:num(ff.value)}});logit(`Set ${tl(ty)} fee for ${s.name} to ${naira(ff.value)} (${tn(tt)} ${S})`);render()}}
 
 document.addEventListener("click",async e=>{
-  const t=e.target.closest("[data-v],[data-a],[data-t],[data-ac],[data-ren],[data-pay],[data-dp],[data-arch],[data-rest],[data-mv],[data-rc]");if(!t)return;const d=t.dataset;
+  const t=e.target.closest("[data-v],[data-a],[data-lf],[data-t],[data-ac],[data-ren],[data-pay],[data-dp],[data-arch],[data-rest],[data-mv],[data-rc]");if(!t)return;const d=t.dataset;
   if(d.a==="bg"&&e.target!==t)return;
   if(d.v){if(d.v!==view){history.pushState({v:d.v},"");navDepth++}view=d.v;q="";menuOpen=false;window.scrollTo(0,0);return render()}
+  if(d.lf){lf=d.lf;return render()}
   if(d.t){T=d.t;return render()}if(d.ac){A=d.ac;return render()}
   if(d.ren){sh={k:"ren",id:d.ren};return render()}
   if(d.pay){sh={k:"pay",id:d.pay,ty:d.ty,tt:d.tt};return render()}
@@ -316,7 +324,7 @@ function exportCSV(){const q=v=>{let s=String(v??"");if(/^[=+\-@]/.test(s))s="'"
 const busy=()=>document.activeElement&&document.activeElement.matches("input,select");
 const page=async(t,ord)=>{let out=[],i=0;for(;;){let q=sb.from(t).select("*");ord.forEach(o=>q=q.order(o));const r=await q.range(i,i+999);if(r.error)throw r.error;out=out.concat(r.data);if(r.data.length<1000)return out;i+=1000}};
 async function load(){try{
-  const [c,se,st,fe,cf,pa,lg]=await Promise.all([page("classes",["position","id"]),page("sessions",["position","name"]),page("students",["id"]),page("fees",["student_id","session","term","type"]),page("class_fees",["class_id","session","term","type"]),page("payments",["id"]),sb.from("activity_log").select("*").order("at",{ascending:false}).limit(300)]);
+  const [c,se,st,fe,cf,pa,lg]=await Promise.all([page("classes",["position","id"]),page("sessions",["position","name"]),page("students",["id"]),page("fees",["student_id","session","term","type"]),page("class_fees",["class_id","session","term","type"]),page("payments",["id"]),sb.from("activity_log").select("*").order("at",{ascending:false}).limit(1000)]);
   if(lg.error)throw lg.error;
   if(c.length)CL=c.map(x=>({id:x.id,name:x.name}));
   sessions=se.map(x=>x.name);if(!sessions.includes(S))S=sessions[sessions.length-1]||"";
