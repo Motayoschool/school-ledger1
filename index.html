@@ -52,7 +52,7 @@ td.p{padding:8px;white-space:nowrap}
 <script>
 const CLS0=[["Playgroup","Pre Creche"],["Creche"],["Nursery 1"],["Nursery 2"],["Nursery 3"],["Primary 1"],["Primary 2"],["Primary 3"],["Primary 4"],["Primary 5"],["Primary 6"],["JSS 1"],["JSS 2"],["JSS 3"]].map(a=>({id:a[0],name:a[1]||a[0]}));
 const TERMS=[["t1","1st Term"],["t2","2nd Term"],["t3","3rd Term"]],TYPES=[["fee","School fee"],["uniform","Uniform"],["books","Books"]];
-const APP_VERSION="1.0.5",REQUIRED_SCHEMA=1;
+const APP_VERSION="1.0.6",REQUIRED_SCHEMA=1;
 let students=[],CF={},CL=CLS0,sessions=[],S="",logs=[],me="Staff",role="staff",sb=null,inflight=0;
 let view="dash",T="t1",A="all",q="",dcls="all",sh=null,menuOpen=false,pending=false;
 let navDepth=0;try{const z=JSON.parse(localStorage.getItem("lv")||"{}");if(z.view)view=z.view;if(z.T)T=z.T;if(z.A)A=z.A;if(z.S)S=z.S}catch(e){}
@@ -101,7 +101,7 @@ const ctl=m=>`<select id="ss" style="width:100%;margin-bottom:8px">${sessions.ma
 function pills(l){const e=sum(l,Fx),c=sum(l,Px),ar=sum(l,arrears);return `<div class="pills"><div class="pill"><span class="lbl">Expected</span><b>${naira(e)}</b></div><div class="pill"><span class="lbl">Collected</span><b style="color:var(--grn)">${naira(c)}</b></div><div class="pill"><span class="lbl">Outstanding</span><b style="color:var(--red)">${naira(Math.max(e-c,0))}</b></div></div><div class="lbl" style="margin:-4px 0 12px">Arrears brought forward: <b>${naira(ar)}</b></div>`}
 
 function nav(){const it=(v,l)=>`<button data-v="${v}" class="${view===v?"on":""}">${l}</button>`;
-  $("nav").innerHTML=it("dash","🏠 Dashboard")+it("def","📋 Defaulters")+`<hr><div class="lbl" style="margin:4px 8px">CLASSES</div>`+CL.map(c=>`<button data-v="${c.id}" class="${view===c.id?"on":""}"><span>${esc(c.name)}</span><span>${inCls(c.id).length}</span></button>`).join("")+`<hr>`+(role==="admin"?it("promo","🎓 Promote / Graduate"):"")+it("arch","📦 Archive")+(role==="admin"?it("cls","⚙️ Manage classes"):"")+it("log","🧾 Activity log")+(role==="admin"?`<button data-a="ses">➕ New session</button><button data-a="imp">⬆ Import students (Excel)</button><button data-a="exp">⬇ Export backup (CSV)</button>`:"")+`<hr><div class="lbl" style="margin:4px 8px">${esc(me)} · ${role}</div><button data-a="pw">🔑 Change password</button><button data-a="signout">🚪 Sign out</button><div class="lbl" style="margin:8px">Version ${APP_VERSION}</div>`;
+  $("nav").innerHTML=it("dash","🏠 Dashboard")+it("def","📋 Defaulters")+`<hr><div class="lbl" style="margin:4px 8px">CLASSES</div>`+CL.map(c=>`<button data-v="${c.id}" class="${view===c.id?"on":""}"><span>${esc(c.name)}</span><span>${inCls(c.id).length}</span></button>`).join("")+`<hr>`+(role==="admin"?it("promo","🎓 Promote / Graduate"):"")+it("arch","📦 Archive")+(role==="admin"?it("cls","⚙️ Manage classes"):"")+it("log","🧾 Activity log")+(role==="admin"?`<button data-a="ses">➕ New session</button><button data-a="imp">⬆ Import students (Excel)</button><button data-a="expx">⬇ Export backup (Excel)</button><button data-a="exp">⬇ Export backup (CSV)</button>`:"")+`<hr><div class="lbl" style="margin:4px 8px">${esc(me)} · ${role}</div><button data-a="pw">🔑 Change password</button><button data-a="signout">🚪 Sign out</button><div class="lbl" style="margin:8px">Version ${APP_VERSION}</div>`;
   $("nav").classList.toggle("open",menuOpen);$("scrim").classList.toggle("show",menuOpen)}
 
 function render(){pending=false;nav();try{localStorage.setItem("lv",JSON.stringify({view,T,A,S}))}catch(e){}$("bk").style.display=view==="dash"?"none":"";$("st").textContent=navigator.onLine?"● synced":"● offline";const M=$("main");
@@ -215,6 +215,7 @@ document.addEventListener("click",async e=>{
   if(a==="yes"){const f=sh.fn;sh=null;f&&f();return render()}
   if(a==="signout"){await sb.auth.signOut();try{if("caches" in window){const ks=await caches.keys();await Promise.all(ks.map(k=>caches.delete(k)))}}catch(e){}location.reload();return}
   if(a==="exp")return exportCSV();
+  if(a==="expx")return exportXLSX();
   if(a==="imp"||a==="impagain"){if(role!=="admin")return;sh={k:"imp"};menuOpen=false;return render()}
   if(a==="clrarch"){if(role!=="admin")return;const n=students.filter(s=>(s.status||"active")!=="active").length;if(!n)return;sh={k:"delpin",mode:"all",n};return render()}
   if(a==="setpin"){if(role!=="admin")return;const r=await sb.rpc("owner_pin_is_set");if(r.error)return alert(/find the function|schema cache/i.test(r.error.message)?"The owner-password SQL has not been run in Supabase yet.":r.error.message);sh={k:"setpin",has:!!r.data};menuOpen=false;return render()}
@@ -259,7 +260,7 @@ const IMP_COLS={name:["name","names","studentname","studentsname","fullname","fu
   cls:["class","classname","grade","level","currentclass"],gender:["gender","sex"],
   phone:["phone","phonenumber","phoneno","parentsnumber","parentnumber","parentsphone","parentphone","parentsphonenumber","parentphonenumber","guardianphone","guardiannumber","contact","contactnumber","parentscontact","mobile","mobilenumber","tel","telephone"],
   fee:["schoolfee","schoolfees","fee","fees","tuition"],uniform:["uniform"],books:["books","book"]};
-const IMP_SKIP=["instructions","lists","classes","readme","help"];
+const IMP_SKIP=["instructions","lists","classes","readme","help","payments","fees"];
 const nk=s=>String(s??"").toLowerCase().replace(/[^a-z0-9]/g,"");
 const ncls=s=>nk(s).replace(/^pry/,"primary").replace(/^nur(?!sery)/,"nursery").replace(/one$/,"1").replace(/two$/,"2").replace(/three$/,"3").replace(/four$/,"4").replace(/five$/,"5").replace(/six$/,"6");
 const nname=s=>String(s||"").toLowerCase().replace(/[^a-z0-9 ]/g," ").split(/\s+/).filter(Boolean).sort().join(" ");
@@ -332,6 +333,12 @@ function impBody(){
   <div class="row" style="margin-top:14px"><button class="btn ghost" data-a="impagain">Other file</button><button class="btn ghost" data-a="close">Cancel</button><button class="btn" data-a="doimp" style="flex:1" ${r.ok.length?"":"disabled"}>Import ${r.ok.length}</button></div>`}
 /*IMPORT-END*/
 
+async function exportXLSX(){try{const X=await loadXLSX(),wb=X.utils.book_new(),d=new Date().toISOString().slice(0,10);
+  const st=[["Name","Class","Status","Gender","Phone","Overall balance"],...students.map(s=>[s.name,cname(s.cls),s.status||"active",s.gender||"",String(s.phone||""),owedAll(s)])];
+  const pm=[["Student","Class","Session","Term","Type","Amount","Date","Recorded by"],...students.flatMap(s=>Object.keys(s.payments||{}).flatMap(k=>{const p=pk(k);return s.payments[k].map(x=>[s.name,cname(s.cls),p.se,tn(p.t),tl(p.ty),num(x.amt),x.date||"",x.by||""])}))];
+  const fe=[["Student","Class","Session","Term","Type","Fee"],...students.flatMap(s=>periods().flatMap(([se,t])=>TYPES.map(([ty])=>[s,se,t,ty]).filter(([s,se,t,ty])=>fee(s,ty,se,t)).map(([s,se,t,ty])=>[s.name,cname(s.cls),se,tn(t),tl(ty),fee(s,ty,se,t)])))];
+  [["Students",st],["Payments",pm],["Fees",fe]].forEach(([n,rows])=>{const ws=X.utils.aoa_to_sheet(rows);ws["!cols"]=rows[0].map((_,i)=>({wch:Math.min(40,Math.max(10,...rows.slice(0,200).map(r=>String(r[i]??"").length)+2))}));X.utils.book_append_sheet(wb,ws,n)});
+  X.writeFile(wb,`ledger-backup-${d}.xlsx`);logit("Exported backup (Excel)")}catch(e){alert("Could not export: "+(e.message||e))}}
 function exportCSV(){const q=v=>{let s=String(v??"");if(/^[=+\-@]/.test(s))s="'"+s;return '"'+s.replace(/"/g,'""')+'"'},dl=(n,rows)=>{const b=new Blob(["\ufeff"+rows.map(r=>r.map(q).join(",")).join("\n")],{type:"text/csv"}),a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=n;document.body.appendChild(a);a.click();a.remove()},d=new Date().toISOString().slice(0,10);
   dl(`students-${d}.csv`,[["Name","Class","Status","Gender","Phone","Overall balance"],...students.map(s=>[s.name,cname(s.cls),s.status,s.gender,s.phone,owedAll(s)])]);
   dl(`payments-${d}.csv`,[["Student","Class","Session","Term","Type","Amount","Date","Recorded by"],...students.flatMap(s=>Object.keys(s.payments||{}).flatMap(k=>{const p=pk(k);return s.payments[k].map(x=>[s.name,cname(s.cls),p.se,tn(p.t),tl(p.ty),x.amt,x.date,x.by])}))]);logit("Exported backup")}
